@@ -1,0 +1,20 @@
+{
+  "name": "satis-extension-matrix",
+  "version": "1.0.0",
+  "description": "Get Satis info pertinent to our infrastructure an build / dev process",
+  "author": "Jonas Ulrich <jonas.ulrich@ruhmesmeile.com>",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "cheerio": "^1.0.0-rc.2",
+    "express": "^4.16.3",
+    "express-handlebars": "^3.0.0",
+    "list.js": "^1.5.0",
+    "request": "^2.87.0",
+    "request-promise": "^4.2.2",
+    "semver-diff": "^2.1.0",
+    "semver-regex": "^2.0.0"
+  }
+}

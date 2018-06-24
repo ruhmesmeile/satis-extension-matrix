@@ -1,0 +1,160 @@
+<div class="container headline">
+    <div class="row">
+        <div class="col">
+            <h1>rm-extension matrix</h1>
+        </div>
+    </div>
+</div>
+
+<div class="container matrix">
+    <div class="row">
+        <div class="col table-col">
+            <table id="table-header" class="table table-striped table-hover table-bordered table-sm">
+                <thead class="thead-dark">
+                    <tr><th scope="col"><div><span></span></div></th></tr>
+                </thead>
+                <tbody>
+                    {{#each distributions}}
+                    <tr>
+                        <th scope="row">{{name}}</th>
+                    </tr>
+                    {{/each}}
+                </tbody>
+            </table>
+
+            <table id="table-items" class="table table-striped table-hover table-bordered table-sm">
+                <thead class="thead-dark">
+                    <tr>
+                        <th scope="col"><div><span></span></div></th>
+                        <th class="rotated divider" scope="col"><div><span>TYPO3-Extensions</span></div></th>
+                        {{#each allRmExtensions}}
+                        <th class="rotated" scope="col">
+                            <div>
+                                <span>
+                                    {{extension name}}&nbsp;&nbsp;
+                                    <span class="version">
+                                        ({{ currentVersion }})
+                                    </span>
+                                </span>
+                            </div>
+                        </th>
+                        {{/each}}
+                        <th class="rotated divider" scope="col">
+                            <div>
+                                <span>Projekt-Extensions</span>
+                            </div>
+                        </th>
+                        {{#each allProjectExtensions}}
+                        <th class="rotated" scope="col">
+                            <div>
+                                <span>{{extension name}}</span>
+                            </div>
+                        </th>
+                        {{/each}}
+                    </tr>
+                </thead>
+                <tbody>
+                    {{#each distributions}}
+                    <tr>
+                        <th scope="row">{{name}}</th>
+                        {{#each @root.allRmExtensions}}
+                        {{#if @../first}}
+                            {{#if @first}}
+                                <td scope="col" rowspan="{{@root.distributions.length}}" class="divider">&nbsp;</td>
+                            {{/if}}
+                        {{/if}}
+                        <td scope="col">{{ version ../this name }}</td>
+                        {{/each}}
+                        {{#each @root.allProjectExtensions}}
+                        {{#if @../first}}
+                            {{#if @first}}
+                                <td scope="col" rowspan="{{@root.distributions.length}}" class="divider">&nbsp;</td>
+                            {{/if}}
+                        {{/if}}
+                        <td scope="col">{{ version ../this name }}</td>
+                        {{/each}}
+                    </tr>
+                    {{/each}}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="container branchToggle">
+    <div class="row">
+        <div class="col-4 align-self-end">
+            <p>Currently selected branch for distributions:&nbsp;</p>
+            <input class="tgl tgl-flip" id="cb5" type="checkbox" />
+            <label class="tgl-btn tgl-branches" data-tg-off="master" data-tg-on="develop" for="cb5"></label>
+        </div>
+        <div class="col-4 align-self-end">
+            <p>Show version differences for branches in distribution:&nbsp;</p>
+            <input class="tgl tgl-light" id="cb1" type="checkbox" />
+            <label class="tgl-btn tgl-distribution" for="cb1"></label>
+        </div>
+    </div>
+</div>
+
+<div class="container howto">
+    <div class="row">
+        <div class="col-8 align-self-center">
+            <p>
+                <h2>How to use:</h2>
+            </p>
+        </div>
+        <div class="col-8 align-self-center">
+            <p>
+                Short facts:
+                <ol>
+                    <li>hover over extension name in table header to highlight version differences in column, for all distributions
+                        using it</li>
+                    <li>hover over distribution row to highlight version differences for used extensions, in relation to their
+                        newest available versions</li>
+                    <li>click on version to open its commit history on
+                        <a target="_blank" href="https://bitbucket.ruhmesmeile.tools/"></a>bitbucket.ruhmesmeile.tools</li>
+                    <li>additionally, on distribution row hover, click on the small, additional [(X.X.X)] label, to view a commit
+                        diff log between used extension and newest available version (or between develop and master if the switch is set)</li>
+                    <li>switch distribution branch (master vs. develop), on which versions and version differences to current version are based</li>
+                    <li>switch to show differences between master and develop branch of each distribution</li>
+                </ol>
+                <div class="currentVersion">(X.X.X)</div>
+                <p>&nbsp;&nbsp;: This is what the current version of the extension label looks like, on row hover</p>
+            </p>
+            <p><strong>Version diff coloring on row / column head hover:</strong></p>
+            <ul class="legend">
+                <li class="current"><strong>current</strong></li>
+                <li class="patch"><strong>patch</strong></li>
+                <li class="minor"><strong>minor</strong></li>
+                <li class="major"><strong>major</strong></li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<div class="container howitsdone">
+    <div class="row">
+        <div class="col-8 align-self-center">
+            <p>
+                <h2>How it's done:</h2>
+            </p>
+        </div>
+        <div class="col-8 align-self-center">
+            <p>All distributions and their extensions are loaded (read: scraped / parsed) from <a href="https://satis.ruhmesmeile.tools">satis.ruhmesmeile.tools</a> live.</p>
+            <p>
+                For every distribution, its <strong>composer.lock</strong> is fetched from its respective repository, for both <strong>develop</strong> and <strong>master</strong> branches.<br>
+                This data augments distributions with their used extension versions. On that basis, links to versions and diffs (between each pair of used version and most up-to-date version) are generated.
+            </p>
+            <p><strong>All visible data is generated live, on page request, by calling the relevant "APIs"!</strong></p>
+            <p>For further information, visit the repository on Github: <a href="https://github.com/ruhmesmeile/satis-extension-matrix">github.com/ruhmesmeile/satis-extension-matrix</a></p>
+        </div>
+    </div>
+</div>
+
+<div class="container writtenby">
+    <div class="row">
+        <div class="col-4 align-self-end">
+            written by <a href="https://ruhmesmeile.com">Jonas Ulrich | ruhmesmeile GmbH</a>
+        </div>
+    </div>
+</div>
