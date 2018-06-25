@@ -27,7 +27,7 @@ const satisRequestOptions = {
 
 const distributionComposerLockJSONRequestOptions = function distributionComposerLockJSONRequestOptions(projectKey, branch) {
   return {
-    uri: `https://${bitbucketHost}/projects/${projectKey}/repos/${baseDistributionName}/raw/composer.lock?at=refs%2Fheads%2F${branch}`, 
+    uri: `https://${bitbucketHost}/projects/${projectKey}/repos/${baseDistributionName}/raw/composer.lock?at=refs%2Fheads%2F${branch}`,
     auth: {
       'user': bitbucketUsername,
       'pass': bitbucketPassword
@@ -89,7 +89,7 @@ const requestSatisPromise = function requestSatisPromise() {
         rmPackagesDev = packageLockJSON['packages-dev'].filter(package => package.name.indexOf('/rm-') > -1 && package.name.indexOf('ruhmesmeile') > -1);
         thirdPartyPackages = packageLockJSON['packages'].filter(package => package.name.indexOf('/rm-') < 0);
         thirdPartyPackagesDev = packageLockJSON['packages-dev'].filter(package => package.name.indexOf('/rm-') < 0);
-        projectPackages = packageLockJSON['packages'].filter(package => package.name.indexOf('/rm-') > -1 && package.name.indexOf('ruhmesmeile') < 0 );
+        projectPackages = packageLockJSON['packages'].filter(package => package.name.indexOf('/rm-') > -1 && package.name.indexOf('ruhmesmeile') < 0);
         projectPackagesDev = packageLockJSON['packages-dev'].filter(package => package.name.indexOf('/rm-') > -1 && package.name.indexOf('ruhmesmeile') < 0);
 
         return [rmPackages, rmPackagesDev, thirdPartyPackages, thirdPartyPackagesDev, projectPackages, projectPackagesDev];
@@ -119,14 +119,14 @@ const requestSatisPromise = function requestSatisPromise() {
         const setDistributionVersionDiff = function setDistributionVersionDiff(extension) {
           let matchingExtension = distribution.extensions.develop.rm.find(ext => ext.name === extension.name);
 
-          if(!matchingExtension) {
+          if (!matchingExtension) {
             matchingExtension = distribution.extensions.develop.project.find(ext => ext.name === extension.name);
           }
 
-          if(matchingExtension) {
+          if (matchingExtension) {
             extension['distributionVersionDiff'] = semverDiff(extension.version, matchingExtension.version);
           }
-          
+
           return extension;
         };
 
@@ -147,12 +147,12 @@ const requestSatisPromise = function requestSatisPromise() {
             'develop': { 'rm': developPackages[0], 'third': developPackages[2], 'project': developPackages[4] },
             'master': { 'rm': masterPackages[0], 'third': masterPackages[2], 'project': masterPackages[4] }
           };
-          
+
           distribution.extensions.develop.rm.forEach(setRelationInSatis);
           distribution.extensions.develop.rm.forEach(setCurrentVersion);
           distribution.extensions.develop.rm.forEach(setVersionDiff);
           distribution.extensions.develop.project.forEach(setRelationInSatis);
-          
+
           distribution.extensions.master.rm.forEach(setRelationInSatis);
           distribution.extensions.master.rm.forEach(setCurrentVersion);
           distribution.extensions.master.rm.forEach(setVersionDiff);
@@ -201,14 +201,14 @@ const requestSatisPromise = function requestSatisPromise() {
 
         const reduceToRmExtensions = function reduceToRmExtensions(accumulator, distribution) {
           return accumulator.concat([
-            ...distribution.extensions.develop.rm, 
+            ...distribution.extensions.develop.rm,
             ...distribution.extensions.master.rm
           ]);
         };
 
         const reduceToThirdPartyExtensions = function reduceToThirdPartyExtensions(accumulator, distribution) {
           return accumulator.concat([
-            ...distribution.extensions.develop.third, 
+            ...distribution.extensions.develop.third,
             ...distribution.extensions.master.third
           ]);
         };
@@ -285,7 +285,7 @@ const distributionDiffLink = function distributionDiffLink(masterExtension, deve
 var app = express();
 var hbs = exphbs.create({
   helpers: {
-    extension: function (extensionFullName) { 
+    extension: function (extensionFullName) {
       return extensionFullName.substring(
         extensionFullName.indexOf('/') + 1,
         extensionFullName.length
@@ -302,7 +302,7 @@ var hbs = exphbs.create({
         developExtension = distribution.extensions.develop.project.find(ext => ext.name.indexOf(extensionName) > -1);
       }
 
-      return masterExtension && developExtension 
+      return masterExtension && developExtension
         ? new hbs.handlebars.SafeString(`
             <span class="diff diff--master diff--${masterExtension.versionDiff}">
               <a target="_blank" href="${versionLink(masterExtension)}">${masterExtension.version}</a> 
@@ -340,4 +340,4 @@ app.get('/', function (req, res) {
   });
 });
 
-app.listen(3000);
+app.listen(3000, "0.0.0.0");
