@@ -1,4 +1,5 @@
 const requestPromise = require('request-promise');
+const constants = require('constants');
 const cheerio = require('cheerio');
 
 const express = require('express');
@@ -22,6 +23,10 @@ const satisRequestOptions = {
   uri: `https://${satisUsername}:${satisPassword}@${satisHost}/`,
   transform: function (body) {
     return cheerio.load(body);
+  },
+  agentOptions: {
+    secureOptions: constants.SSL_OP_NO_SSLv3 | constants.SSL_OP_NO_TLSv1,
+    ecdhCurve: 'auto'
   }
 };
 
@@ -31,6 +36,10 @@ const distributionComposerLockJSONRequestOptions = function distributionComposer
     auth: {
       'user': bitbucketUsername,
       'pass': bitbucketPassword
+    },
+    agentOptions: {
+      secureOptions: constants.SSL_OP_NO_SSLv3 | constants.SSL_OP_NO_TLSv1,
+      ecdhCurve: 'auto',
     }
   };
 };
