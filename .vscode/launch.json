@@ -9,7 +9,17 @@
             "type": "node",
             "request": "launch",
             "name": "Launch Program",
-            "program": "${workspaceFolder}/server.js"
+            "program": "${workspaceFolder}/server.js",
+            "env": {
+                "BITBUCKET_USERNAME": "bitbucket",
+                "BITBUCKET_PASSWORD": "password",
+                "BITBUCKET_HOST": "bitbucket.host.tld",
+                "BITBUCKET_PORT": "7999",
+                "SATIS_USERNAME": "satis",
+                "SATIS_PASSWORD": "password",
+                "SATIS_HOST": "satis.host.tld",
+                "BASE_DISTRIBUTION_NAME": "rm-dist"
+            }
         }
     ]
 }
