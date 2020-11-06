@@ -52,18 +52,18 @@ const requestSatisPromise = function requestSatisPromise() {
     .then(($) => {
       const extractDistributionData = function extractDistributionData(distributionElement) {
         let $distribution = $(distributionElement);
-        let $gitUrl = $distribution.find('strong:contains(Releases)').parent().next().find('a:contains(dev-master)');
+        let $gitUrl = $distribution.find('dt:contains(Releases)').next('dd').find('a:contains(dev-master)');
 
         return {
-          "name": $distribution.find('h3.package-title a.anchor').text().replace('"', '').trim(),
+          "name": $distribution.find('.card-header').attr('id').replace('"', '').trim(),
           "gitUrl": $gitUrl.attr('href')
         };
       };
 
       const extractExtensionData = function extractExtensionData(extensionElement) {
         let $extension = $(extensionElement);
-        let $distributionNames = $extension.find('strong:contains(Required by)').parent().next().find('a');
-        let $allVersionLinks = $extension.find('strong:contains(Releases)').parent().next().find('a');
+        let $distributionNames = $extension.find('dt:contains(Required by)').next('dd').find('a');
+        let $allVersionLinks = $extension.find('dt:contains(Releases)').next('dd').find('a');
         let allVersionLinks = $allVersionLinks.toArray();
 
         currentVersionLink = allVersionLinks.find(version => semverRegex().test(version.firstChild.nodeValue));
@@ -75,7 +75,7 @@ const requestSatisPromise = function requestSatisPromise() {
         });
 
         return {
-          "name": $extension.find('h3.package-title a.anchor').text().replace('"', '').trim(),
+          "name": $extension.find('.card-header').attr('id').replace('"', '').trim(),
           "inDistributions": inDistributions,
           "currentVersion": currentVersion
         };
@@ -84,7 +84,7 @@ const requestSatisPromise = function requestSatisPromise() {
       const extractDataFromPanel = function extractDataFromPanel(index, element) {
         let $element = $(element);
 
-        if ($element.find(`h3.package-title:contains(${baseDistributionName})`).length) {
+        if ($element.find(`.card-header a:contains(${baseDistributionName})`).length) {
           distributions.push(extractDistributionData(element));
         } else {
           extensions.push(extractExtensionData(element));
@@ -103,8 +103,8 @@ const requestSatisPromise = function requestSatisPromise() {
 
         return [rmPackages, rmPackagesDev, thirdPartyPackages, thirdPartyPackagesDev, projectPackages, projectPackagesDev];
       };
-
-      $('.panel').map(extractDataFromPanel);
+      
+      $('#package-list .card').map(extractDataFromPanel);
 
       var promises = distributions.map(distribution => {
         const setRelationInSatis = function setRelationInSatis(extension) {
@@ -125,61 +125,30 @@ const requestSatisPromise = function requestSatisPromise() {
           return extension;
         };
 
-        const setDistributionVersionDiff = function setDistributionVersionDiff(extension) {
-          let matchingExtension = distribution.extensions.develop.rm.find(ext => ext.name === extension.name);
-
-          if (!matchingExtension) {
-            matchingExtension = distribution.extensions.develop.project.find(ext => ext.name === extension.name);
-          }
-
-          if (matchingExtension) {
-            extension['distributionVersionDiff'] = semverDiff(extension.version, matchingExtension.version);
-          }
-
-          return extension;
-        };
-
         // gitUrl format: ssh://git@${bitbucketHost}:${bitbucketPort}/PROJECTKEY/${baseDistributionName}.git
         let distributionProjectKey = distribution.gitUrl.substring(
           distribution.gitUrl.indexOf(`${bitbucketPort}/`) + 5,
           distribution.gitUrl.indexOf(`/${baseDistributionName}.git`)
         );
 
-        let requestDevelopPromise = requestPromise(distributionComposerLockJSONRequestOptions(distributionProjectKey, 'develop'))
-          .then(filterToRmPackages);
-
         let requestMasterPromise = requestPromise(distributionComposerLockJSONRequestOptions(distributionProjectKey, 'master'))
           .then(filterToRmPackages);
 
-        return Promise.all([requestDevelopPromise, requestMasterPromise]).then(function ([developPackages, masterPackages]) {
+        return Promise.all([requestMasterPromise]).then(function ([masterPackages]) {
           distribution['extensions'] = {
-            'develop': { 'rm': developPackages[0], 'third': developPackages[2], 'project': developPackages[4] },
             'master': { 'rm': masterPackages[0], 'third': masterPackages[2], 'project': masterPackages[4] }
           };
-
-          distribution.extensions.develop.rm.forEach(setRelationInSatis);
-          distribution.extensions.develop.rm.forEach(setCurrentVersion);
-          distribution.extensions.develop.rm.forEach(setVersionDiff);
-          distribution.extensions.develop.project.forEach(setRelationInSatis);
 
           distribution.extensions.master.rm.forEach(setRelationInSatis);
           distribution.extensions.master.rm.forEach(setCurrentVersion);
           distribution.extensions.master.rm.forEach(setVersionDiff);
-          distribution.extensions.master.rm.forEach(setDistributionVersionDiff);
           distribution.extensions.master.project.forEach(setRelationInSatis);
-          distribution.extensions.master.project.forEach(setDistributionVersionDiff);
 
           // These (devExtensions) are not used for anything yet, might want to copy some more
           // forEach cases from above when starting to use these
           distribution['devExtensions'] = {
-            'develop': { 'rm': developPackages[1], 'third': developPackages[3], 'project': developPackages[5] },
             'master': { 'rm': masterPackages[1], 'third': masterPackages[3], 'project': masterPackages[5] }
           };
-
-          distribution.devExtensions.develop.rm.forEach(setRelationInSatis);
-          distribution.devExtensions.develop.rm.forEach(setCurrentVersion);
-          distribution.devExtensions.develop.rm.forEach(setVersionDiff);
-          distribution.devExtensions.develop.project.forEach(setRelationInSatis);
 
           distribution.devExtensions.master.rm.forEach(setRelationInSatis);
           distribution.devExtensions.master.rm.forEach(setCurrentVersion);
@@ -210,21 +179,18 @@ const requestSatisPromise = function requestSatisPromise() {
 
         const reduceToRmExtensions = function reduceToRmExtensions(accumulator, distribution) {
           return accumulator.concat([
-            ...distribution.extensions.develop.rm,
             ...distribution.extensions.master.rm
           ]);
         };
 
         const reduceToThirdPartyExtensions = function reduceToThirdPartyExtensions(accumulator, distribution) {
           return accumulator.concat([
-            ...distribution.extensions.develop.third,
             ...distribution.extensions.master.third
           ]);
         };
 
         const reduceToProjectExtensions = function reduceToProjectExtensions(accumulator, distribution) {
           return accumulator.concat([
-            ...distribution.extensions.develop.project.map(removeNameFromProjectExtension),
             ...distribution.extensions.master.project.map(removeNameFromProjectExtension)
           ]);
         };
@@ -276,21 +242,6 @@ const versionDiffLink = function versionDiffLink(extension) {
   return `https://${bitbucketHost}/projects/${projectKey}/repos/${repoName}/compare/commits?targetBranch=refs%2Ftags%2F${extension.version}&sourceBranch=refs%2Ftags%2F${extension.currentVersion}`;
 };
 
-const distributionDiffLink = function distributionDiffLink(masterExtension, developExtension) {
-  // extension.source.url format: "ssh://git@${bitbucketHost}:${bitbucketPort}/PROJECTKEY/REPONAME.git"
-  const repoName = masterExtension.source.url.substring(
-    masterExtension.source.url.lastIndexOf('/') + 1,
-    masterExtension.source.url.indexOf('.git')
-  );
-
-  const projectKey = masterExtension.source.url.substring(
-    masterExtension.source.url.indexOf(`${bitbucketPort}/`) + 5,
-    masterExtension.source.url.indexOf(repoName) - 1
-  );
-
-  return `https://${bitbucketHost}/projects/${projectKey}/repos/${repoName}/compare/commits?targetBranch=refs%2Ftags%2F${masterExtension.version}&sourceBranch=refs%2Ftags%2F${developExtension.version}`;
-}
-
 var app = express();
 var hbs = exphbs.create({
   helpers: {
@@ -306,29 +257,12 @@ var hbs = exphbs.create({
         masterExtension = distribution.extensions.master.project.find(ext => ext.name.indexOf(extensionName) > -1);
       }
 
-      let developExtension = distribution.extensions.develop.rm.find(ext => ext.name === extensionName);
-      if (!developExtension) {
-        developExtension = distribution.extensions.develop.project.find(ext => ext.name.indexOf(extensionName) > -1);
-      }
-
-      return masterExtension && developExtension
+      return masterExtension
         ? new hbs.handlebars.SafeString(`
             <span class="diff diff--master diff--${masterExtension.versionDiff}">
               <a target="_blank" href="${versionLink(masterExtension)}">${masterExtension.version}</a> 
               <span class="currentVersion">
                 (<a target="_blank" href="${versionDiffLink(masterExtension)}">${masterExtension.currentVersion}</a>)
-              </span>
-            </span>
-            <span class="diff diff--develop diff--${developExtension.versionDiff}">
-              <a target="_blank" href="${versionLink(developExtension)}">${developExtension.version}</a> 
-              <span class="currentVersion">
-                (<a target="_blank" href="${versionDiffLink(developExtension)}">${developExtension.currentVersion}</a>)
-              </span>
-            </span>
-            <span class="diff diff--distribution diff--${masterExtension.distributionVersionDiff}">
-              <a target="_blank" href="${versionLink(masterExtension)}">${masterExtension.version}</a> 
-              <span class="currentVersion">
-                (<a target="_blank" href="${distributionDiffLink(masterExtension, developExtension)}">${developExtension.version}</a>)
               </span>
             </span>
           `)
