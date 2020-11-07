@@ -30,9 +30,9 @@ const satisRequestOptions = {
   }
 };
 
-const distributionComposerLockJSONRequestOptions = function distributionComposerLockJSONRequestOptions(projectKey, branch) {
+const distributionFileRequestOptions = function distributionFileRequestOptions(projectKey, file, branch) {
   return {
-    uri: `https://${bitbucketHost}/projects/${projectKey}/repos/${baseDistributionName}/raw/composer.lock?at=refs%2Fheads%2F${branch}`,
+    uri: `https://${bitbucketHost}/projects/${projectKey}/repos/${baseDistributionName}/raw/${file}?at=refs%2Fheads%2F${branch}`,
     auth: {
       'user': bitbucketUsername,
       'pass': bitbucketPassword
@@ -91,17 +91,27 @@ const requestSatisPromise = function requestSatisPromise() {
         }
       };
 
-      const filterToRmPackages = function filterToRmPackages(packageLockBody) {
-        let packageLockJSON = JSON.parse(packageLockBody);
+      const filterComposerLockToRmPackages = function filterComposerLockToRmPackages(composerLockBody) {
+        let composerLockJSON = JSON.parse(composerLockBody);
 
-        rmPackages = packageLockJSON['packages'].filter(package => package.name.indexOf('/rm-') > -1 && package.name.indexOf('ruhmesmeile') > -1);
-        rmPackagesDev = packageLockJSON['packages-dev'].filter(package => package.name.indexOf('/rm-') > -1 && package.name.indexOf('ruhmesmeile') > -1);
-        thirdPartyPackages = packageLockJSON['packages'].filter(package => package.name.indexOf('/rm-') < 0);
-        thirdPartyPackagesDev = packageLockJSON['packages-dev'].filter(package => package.name.indexOf('/rm-') < 0);
-        projectPackages = packageLockJSON['packages'].filter(package => package.name.indexOf('/rm-') > -1 && package.name.indexOf('ruhmesmeile') < 0);
-        projectPackagesDev = packageLockJSON['packages-dev'].filter(package => package.name.indexOf('/rm-') > -1 && package.name.indexOf('ruhmesmeile') < 0);
+        rmPackages = composerLockJSON['packages'].filter(package => package.name.indexOf('/rm-') > -1 && package.name.indexOf('ruhmesmeile') > -1);
+        rmPackagesDev = composerLockJSON['packages-dev'].filter(package => package.name.indexOf('/rm-') > -1 && package.name.indexOf('ruhmesmeile') > -1);
+        thirdPartyPackages = composerLockJSON['packages'].filter(package => package.name.indexOf('/rm-') < 0);
+        thirdPartyPackagesDev = composerLockJSON['packages-dev'].filter(package => package.name.indexOf('/rm-') < 0);
+        projectPackages = composerLockJSON['packages'].filter(package => package.name.indexOf('/rm-') > -1 && package.name.indexOf('ruhmesmeile') < 0);
+        projectPackagesDev = composerLockJSON['packages-dev'].filter(package => package.name.indexOf('/rm-') > -1 && package.name.indexOf('ruhmesmeile') < 0);
 
         return [rmPackages, rmPackagesDev, thirdPartyPackages, thirdPartyPackagesDev, projectPackages, projectPackagesDev];
+      };
+
+      const extractDistributionInfoFromComposerJson = function extractDistributionInfoFromComposerJson(composerJsonBody) {
+        let composerJsonJSON = JSON.parse(composerJsonBody);
+
+        return {
+          version: composerJsonJSON.version,
+          bambooProjectKey: (composerJsonJSON.extra['ruhmesmeile/rm-configuration']
+                              && composerJsonJSON.extra['ruhmesmeile/rm-configuration'].rmBambooProjectKey) || '',
+        };
       };
       
       $('#package-list .card').map(extractDataFromPanel);
@@ -131,12 +141,14 @@ const requestSatisPromise = function requestSatisPromise() {
           distribution.gitUrl.indexOf(`/${baseDistributionName}.git`)
         );
 
-        let requestMasterPromise = requestPromise(distributionComposerLockJSONRequestOptions(distributionProjectKey, 'master'))
-          .then(filterToRmPackages);
+        let requestComposerLockPromise = requestPromise(distributionFileRequestOptions(distributionProjectKey, 'composer.lock', 'master'))
+          .then(filterComposerLockToRmPackages);
+        let requestComposerJsonPromise = requestPromise(distributionFileRequestOptions(distributionProjectKey, 'composer.json', 'master'))
+          .then(extractDistributionInfoFromComposerJson);
 
-        return Promise.all([requestMasterPromise]).then(function ([masterPackages]) {
+        return Promise.all([requestComposerLockPromise, requestComposerJsonPromise]).then(function ([composerLock, composerJson]) {
           distribution['extensions'] = {
-            'master': { 'rm': masterPackages[0], 'third': masterPackages[2], 'project': masterPackages[4] }
+            'master': { 'rm': composerLock[0], 'third': composerLock[2], 'project': composerLock[4] }
           };
 
           distribution.extensions.master.rm.forEach(setRelationInSatis);
@@ -147,7 +159,7 @@ const requestSatisPromise = function requestSatisPromise() {
           // These (devExtensions) are not used for anything yet, might want to copy some more
           // forEach cases from above when starting to use these
           distribution['devExtensions'] = {
-            'master': { 'rm': masterPackages[1], 'third': masterPackages[3], 'project': masterPackages[5] }
+            'master': { 'rm': composerLock[1], 'third': composerLock[3], 'project': composerLock[5] }
           };
 
           distribution.devExtensions.master.rm.forEach(setRelationInSatis);
@@ -267,6 +279,36 @@ var hbs = exphbs.create({
             </span>
           `)
         : new hbs.handlebars.SafeString('<span class="x">X</span>');
+    },
+    isFirst: function (index, options) {
+      if (index === 0){
+         return options.fn(this);
+      } else {
+         return options.inverse(this);
+      }
+    },
+    isSecond: function (index, options) {
+      if (index === 1){
+         return options.fn(this);
+      } else {
+         return options.inverse(this);
+      }
+    },
+    isThird: function (index, options) {
+      if (index === 2){
+         return options.fn(this);
+      } else {
+         return options.inverse(this);
+      }
+    },
+    isDivider: function (category, parentIndex, index, options) {
+      if (category === 'rm' && ((parentIndex == 0) && (index === 0))) {
+        return options.fn(this);
+      } else if (category === 'all' && ((parentIndex == 0) && (index === 0))) {
+        return options.fn(this);
+      } else {
+        return options.inverse(this);
+      }
     }
   },
   defaultLayout: 'main'

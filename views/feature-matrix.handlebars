@@ -26,6 +26,8 @@
                 <thead class="thead-dark">
                     <tr>
                         <th scope="col"><div><span></span></div></th>
+                        <th class="rotated divider" scope="col"><div><span>Basiswebsite</span></div></th>
+                        <th class="rotated divider" scope="col"><div><span>Entwicklungsprozess</span></div></th>
                         <th class="rotated divider" scope="col"><div><span>TYPO3-Extensions</span></div></th>
                         {{#each allRmExtensions}}
                         <th class="rotated" scope="col">
@@ -58,19 +60,17 @@
                     <tr>
                         <th scope="row">{{name}}</th>
                         {{#each @root.allRmExtensions}}
-                        {{#if @../first}}
-                            {{#if @first}}
-                                <td scope="col" rowspan="{{@root.distributions.length}}" class="divider">&nbsp;</td>
-                            {{/if}}
-                        {{/if}}
+                        {{#isDivider "rm" @../index @index}}
+                            <td scope="col" rowspan="{{@root.distributions.length}}" class="divider">&nbsp;</td>
+                            <td scope="col" rowspan="{{@root.distributions.length}}" class="divider">&nbsp;</td>
+                            <td scope="col" rowspan="{{@root.distributions.length}}" class="divider">&nbsp;</td>
+                        {{/isDivider}}
                         <td scope="col">{{ version ../this name }}</td>
                         {{/each}}
                         {{#each @root.allProjectExtensions}}
-                        {{#if @../first}}
-                            {{#if @first}}
-                                <td scope="col" rowspan="{{@root.distributions.length}}" class="divider">&nbsp;</td>
-                            {{/if}}
-                        {{/if}}
+                        {{#isDivider "all" @../index @index}}
+                            <td scope="col" rowspan="{{@root.distributions.length}}" class="divider">&nbsp;</td>
+                        {{/isDivider}}
                         <td scope="col">{{ version ../this name }}</td>
                         {{/each}}
                     </tr>
