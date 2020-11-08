@@ -1,7 +1,7 @@
 <div class="container headline">
     <div class="row">
         <div class="col">
-            <h1>rm-extension matrix</h1>
+            <h1>TYPO3 Basiswebsite<br><span class="glitch" data-text="matrix">matrix</span></h1>
         </div>
     </div>
 </div>
@@ -27,7 +27,38 @@
                     <tr>
                         <th scope="col"><div><span></span></div></th>
                         <th class="rotated divider" scope="col"><div><span>Basiswebsite</span></div></th>
+                        <th class="rotated" scope="col">
+                            <div>
+                                <span>
+                                    TYPO3 Core Version&nbsp;&nbsp;
+                                    <span class="version">
+                                        (TODO add currenct TYPO3 version)
+                                    </span>
+                                </span>
+                            </div>
+                        </th>
                         <th class="rotated divider" scope="col"><div><span>Entwicklungsprozess</span></div></th>
+                        <th class="rotated" scope="col">
+                            <div>
+                                <span>
+                                    Frontend Integration&nbsp;&nbsp;
+                                    <span class="version">
+                                        (O/N)
+                                    </span>
+                                </span>
+                            </div>
+                        </th>
+                        <th class="rotated divider" scope="col"><div><span>Frontend</span></div></th>
+                        <th class="rotated" scope="col">
+                            <div>
+                                <span>
+                                    Neues Frontend&nbsp;&nbsp;
+                                    <span class="version">
+                                        (O/N)
+                                    </span>
+                                </span>
+                            </div>
+                        </th>
                         <th class="rotated divider" scope="col"><div><span>TYPO3-Extensions</span></div></th>
                         {{#each allRmExtensions}}
                         <th class="rotated" scope="col">
@@ -59,10 +90,20 @@
                     {{#each distributions}}
                     <tr>
                         <th scope="row">{{name}}</th>
+                        {{#if @first}}
+                            <td scope="col" rowspan="{{@root.distributions.length}}" class="divider">&nbsp;</td>
+                        {{/if}}
+                        <td scope="col">X.X.X</td>
+                        {{#if @first}}
+                            <td scope="col" rowspan="{{@root.distributions.length}}" class="divider">&nbsp;</td>
+                        {{/if}}
+                        <td scope="col">X.X.X</td>
+                        {{#if @first}}
+                            <td scope="col" rowspan="{{@root.distributions.length}}" class="divider">&nbsp;</td>
+                        {{/if}}
+                        <td scope="col">X.X.X</td>
                         {{#each @root.allRmExtensions}}
                         {{#isDivider "rm" @../index @index}}
-                            <td scope="col" rowspan="{{@root.distributions.length}}" class="divider">&nbsp;</td>
-                            <td scope="col" rowspan="{{@root.distributions.length}}" class="divider">&nbsp;</td>
                             <td scope="col" rowspan="{{@root.distributions.length}}" class="divider">&nbsp;</td>
                         {{/isDivider}}
                         <td scope="col">{{ version ../this name }}</td>

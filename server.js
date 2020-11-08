@@ -1,9 +1,11 @@
 const requestPromise = require('request-promise');
 const constants = require('constants');
 const cheerio = require('cheerio');
+const path = require('path');
 
 const express = require('express');
 const exphbs = require('express-handlebars');
+const sassMiddleware = require('node-sass-middleware')
 
 const semverRegex = require('semver-regex');
 const semverDiff = require('semver-diff');
@@ -280,27 +282,6 @@ var hbs = exphbs.create({
           `)
         : new hbs.handlebars.SafeString('<span class="x">X</span>');
     },
-    isFirst: function (index, options) {
-      if (index === 0){
-         return options.fn(this);
-      } else {
-         return options.inverse(this);
-      }
-    },
-    isSecond: function (index, options) {
-      if (index === 1){
-         return options.fn(this);
-      } else {
-         return options.inverse(this);
-      }
-    },
-    isThird: function (index, options) {
-      if (index === 2){
-         return options.fn(this);
-      } else {
-         return options.inverse(this);
-      }
-    },
     isDivider: function (category, parentIndex, index, options) {
       if (category === 'rm' && ((parentIndex == 0) && (index === 0))) {
         return options.fn(this);
@@ -317,6 +298,14 @@ var hbs = exphbs.create({
 app.engine('handlebars', hbs.engine);
 app.set('view engine', 'handlebars');
 
+app.use(sassMiddleware({
+  src: path.join(__dirname, 'src', 'scss'),
+  dest: path.join(__dirname, 'public', 'css'),
+  debug: true,
+  outputStyle: 'compressed',
+  includePaths: 'node_modules/compass-mixins/lib',
+  prefix:  '/css'  // Where prefix is at <link rel="stylesheets" href="prefix/style.css"/>
+}));
 app.use(express.static('public'));
 
 app.get('/', function (req, res) {

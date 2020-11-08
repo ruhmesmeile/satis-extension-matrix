@@ -24,13 +24,18 @@ $(document).ready(function () {
     // diff info (colors) and current version on respective column cells
     let toggleActiveColumn = function toggleActiveColumn(ev) {
         const $thHeader = $(ev.currentTarget);
+        console.log($thHeader);
 
         const tdIndex = $thHeader.prevAll('th.rotated').length;
+        const numberOfDividers = $thHeader.prevAll('th.rotated.divider').length;;
         $thHeader.parents('table').children('tbody').children('tr').each(function (index, element) {
             let $tds = $(element).find('td');
-            index === 0
-                ? $tds.eq(tdIndex).toggleClass('active')
-                : $tds.eq(tdIndex - 1).toggleClass('active');
+
+            if (index === 0) {
+                $tds.eq(tdIndex).toggleClass('active')
+            } else {
+                $tds.eq(tdIndex - numberOfDividers).toggleClass('active');
+            }
         });
 
         $thHeader.toggleClass('active');

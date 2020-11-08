@@ -9,9 +9,11 @@
   },
   "dependencies": {
     "cheerio": "^1.0.0-rc.2",
+    "compass-mixins": "^0.12.10",
     "express": "^4.16.3",
     "express-handlebars": "^3.0.0",
     "list.js": "^1.5.0",
+    "node-sass-middleware": "^0.11.0",
     "request": "^2.87.0",
     "request-promise": "^4.2.2",
     "semver-diff": "^2.1.0",
