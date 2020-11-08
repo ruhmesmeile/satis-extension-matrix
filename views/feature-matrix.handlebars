@@ -27,62 +27,21 @@
                     <tr>
                         <th scope="col"><div><span></span></div></th>
                         <th class="rotated divider" scope="col"><div><span>Basiswebsite</span></div></th>
-                        <th class="rotated" scope="col">
-                            <div>
-                                <span>
-                                    TYPO3 Core Version&nbsp;&nbsp;
-                                    <span class="version">
-                                        (TODO add currenct TYPO3 version)
-                                    </span>
-                                </span>
-                            </div>
-                        </th>
+                        <th class="rotated" scope="col"><div><span>rm-dist Version&nbsp;&nbsp;</span></div></th>
+                        <th class="rotated" scope="col"><div><span>TYPO3 Core Version&nbsp;&nbsp;<span class="version">({{currentTypo3CoreVersion}})</span></span></div></th>
+                        <th class="rotated" scope="col"><div><span>Bamboo Project Key&nbsp;&nbsp;</span></div></th>
                         <th class="rotated divider" scope="col"><div><span>Entwicklungsprozess</span></div></th>
-                        <th class="rotated" scope="col">
-                            <div>
-                                <span>
-                                    Frontend Integration&nbsp;&nbsp;
-                                    <span class="version">
-                                        (O/N)
-                                    </span>
-                                </span>
-                            </div>
-                        </th>
+                        <th class="rotated" scope="col"><div><span>Automatic Frontend Integration&nbsp;&nbsp;</span></div></th>
+                        <th class="rotated" scope="col"><div><span>Automatic Backup Scripts&nbsp;&nbsp;</span></div></th>
                         <th class="rotated divider" scope="col"><div><span>Frontend</span></div></th>
-                        <th class="rotated" scope="col">
-                            <div>
-                                <span>
-                                    Neues Frontend&nbsp;&nbsp;
-                                    <span class="version">
-                                        (O/N)
-                                    </span>
-                                </span>
-                            </div>
-                        </th>
+                        <th class="rotated" scope="col"><div><span>New Frontend&nbsp;&nbsp;</span></div></th>
                         <th class="rotated divider" scope="col"><div><span>TYPO3-Extensions</span></div></th>
                         {{#each allRmExtensions}}
-                        <th class="rotated" scope="col">
-                            <div>
-                                <span>
-                                    {{extension name}}&nbsp;&nbsp;
-                                    <span class="version">
-                                        ({{ currentVersion }})
-                                    </span>
-                                </span>
-                            </div>
-                        </th>
+                        <th class="rotated" scope="col"><div><span>{{extension name}}&nbsp;&nbsp;<span class="version">({{ currentVersion }})</span></span></div></th>
                         {{/each}}
-                        <th class="rotated divider" scope="col">
-                            <div>
-                                <span>Projekt-Extensions</span>
-                            </div>
-                        </th>
+                        <th class="rotated divider" scope="col"><div><span>Project-Extensions</span></div></th>
                         {{#each allProjectExtensions}}
-                        <th class="rotated" scope="col">
-                            <div>
-                                <span>{{extension name}}</span>
-                            </div>
-                        </th>
+                        <th class="rotated" scope="col"><div><span>{{extension name}}</span></div></th>
                         {{/each}}
                     </tr>
                 </thead>
@@ -93,15 +52,18 @@
                         {{#if @first}}
                             <td scope="col" rowspan="{{@root.distributions.length}}" class="divider">&nbsp;</td>
                         {{/if}}
-                        <td scope="col">X.X.X</td>
+                        <td scope="col">{{rmDistVersion}}</td>
+                        <td scope="col">{{ typo3Version typo3CoreVersion @root.currentTypo3CoreVersion }}</td>
+                        <td scope="col">{{rmBambooProjectKey}}</td>
                         {{#if @first}}
                             <td scope="col" rowspan="{{@root.distributions.length}}" class="divider">&nbsp;</td>
                         {{/if}}
-                        <td scope="col">X.X.X</td>
+                        <td scope="col">{{#if frontendIntegration}}<i class="far fa-check-circle"></i>{{else}}<i class="far fa-times-circle"></i>{{/if}}</td>
+                        <td scope="col">{{#if backupTypo3}}<i class="far fa-check-circle"></i>{{else}}<i class="far fa-times-circle"></i>{{/if}}</td>
                         {{#if @first}}
                             <td scope="col" rowspan="{{@root.distributions.length}}" class="divider">&nbsp;</td>
                         {{/if}}
-                        <td scope="col">X.X.X</td>
+                        <td scope="col">{{#if newFrontend}}<i class="far fa-check-circle"></i>{{else}}<i class="far fa-times-circle"></i>{{/if}}</td>
                         {{#each @root.allRmExtensions}}
                         {{#isDivider "rm" @../index @index}}
                             <td scope="col" rowspan="{{@root.distributions.length}}" class="divider">&nbsp;</td>

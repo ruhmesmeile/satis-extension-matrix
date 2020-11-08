@@ -46,6 +46,19 @@ const distributionFileRequestOptions = function distributionFileRequestOptions(p
   };
 };
 
+const typo3CmsPackagistRequestOptions = function typo3CmsPackagistRequestOptions() {
+  return {
+    uri: 'https://packagist.org/packages/typo3/cms-core',
+    transform: function (body) {
+      return cheerio.load(body);
+    },
+    agentOptions: {
+      secureOptions: constants.SSL_OP_NO_SSLv3 | constants.SSL_OP_NO_TLSv1,
+      ecdhCurve: 'auto',
+    }
+  };
+};
+
 const requestSatisPromise = function requestSatisPromise() {
   const distributions = [];
   const extensions = [];
@@ -94,27 +107,61 @@ const requestSatisPromise = function requestSatisPromise() {
       };
 
       const filterComposerLockToRmPackages = function filterComposerLockToRmPackages(composerLockBody) {
-        let composerLockJSON = JSON.parse(composerLockBody);
+        const composerLockJSON = JSON.parse(composerLockBody);
 
-        rmPackages = composerLockJSON['packages'].filter(package => package.name.indexOf('/rm-') > -1 && package.name.indexOf('ruhmesmeile') > -1);
-        rmPackagesDev = composerLockJSON['packages-dev'].filter(package => package.name.indexOf('/rm-') > -1 && package.name.indexOf('ruhmesmeile') > -1);
-        thirdPartyPackages = composerLockJSON['packages'].filter(package => package.name.indexOf('/rm-') < 0);
-        thirdPartyPackagesDev = composerLockJSON['packages-dev'].filter(package => package.name.indexOf('/rm-') < 0);
-        projectPackages = composerLockJSON['packages'].filter(package => package.name.indexOf('/rm-') > -1 && package.name.indexOf('ruhmesmeile') < 0);
-        projectPackagesDev = composerLockJSON['packages-dev'].filter(package => package.name.indexOf('/rm-') > -1 && package.name.indexOf('ruhmesmeile') < 0);
+        const rmPackages = composerLockJSON['packages'].filter(package => package.name.indexOf('/rm-') > -1 && package.name.indexOf('ruhmesmeile') > -1);
+        const rmPackagesDev = composerLockJSON['packages-dev'].filter(package => package.name.indexOf('/rm-') > -1 && package.name.indexOf('ruhmesmeile') > -1);
+        const thirdPartyPackages = composerLockJSON['packages'].filter(package => package.name.indexOf('/rm-') < 0);
+        const thirdPartyPackagesDev = composerLockJSON['packages-dev'].filter(package => package.name.indexOf('/rm-') < 0);
+        const projectPackages = composerLockJSON['packages'].filter(package => package.name.indexOf('/rm-') > -1 && package.name.indexOf('ruhmesmeile') < 0);
+        const projectPackagesDev = composerLockJSON['packages-dev'].filter(package => package.name.indexOf('/rm-') > -1 && package.name.indexOf('ruhmesmeile') < 0);
 
-        return [rmPackages, rmPackagesDev, thirdPartyPackages, thirdPartyPackagesDev, projectPackages, projectPackagesDev];
+        // TODO this signifies a difference in build process (general cms-include, vs. specific core)
+        const typo3CoreExt = composerLockJSON['packages'].filter(package => (package.name === 'typo3/cms-core' || package.name === 'typo3/cms'));
+
+        return [
+          rmPackages,
+          rmPackagesDev,
+          thirdPartyPackages,
+          thirdPartyPackagesDev,
+          projectPackages,
+          projectPackagesDev,
+          typo3CoreExt[0].version.replace('v','')
+        ];
       };
 
       const extractDistributionInfoFromComposerJson = function extractDistributionInfoFromComposerJson(composerJsonBody) {
-        let composerJsonJSON = JSON.parse(composerJsonBody);
+        const composerJsonJSON = JSON.parse(composerJsonBody);
 
-        return {
-          version: composerJsonJSON.version,
-          bambooProjectKey: (composerJsonJSON.extra['ruhmesmeile/rm-configuration']
-                              && composerJsonJSON.extra['ruhmesmeile/rm-configuration'].rmBambooProjectKey) || '',
-        };
+        let rmBambooProjectKey = '/';
+        // TODO this signifies a difference in build process (where the bambooKey is stored)
+        if (composerJsonJSON.extra['ruhmesmeile/rm-configuration'] && composerJsonJSON.extra['ruhmesmeile/rm-configuration'].rmBambooProjectKey) {
+          rmBambooProjectKey = composerJsonJSON.extra['ruhmesmeile/rm-configuration'].rmBambooProjectKey;
+        } else if (composerJsonJSON.extra['ruhmesmeile/rm-configuration'] && composerJsonJSON.extra['ruhmesmeile/rm-configuration'].settings.rmBambooProjectKey) {
+          rmBambooProjectKey = composerJsonJSON.extra['ruhmesmeile/rm-configuration'].settings.rmBambooProjectKey;
+        }
+
+        return [
+          composerJsonJSON.version,
+          rmBambooProjectKey.substr(0,6)
+        ];
       };
+
+      const extractDistributionInfoFromWriteInstallFiles = function extractDistributionInfoFromWriteInstallFiles(writeInstallFilesBody) {
+        const newFrontendIntegration = writeInstallFilesBody.indexOf('verdaccio') > 0;
+
+        return [
+          newFrontendIntegration
+        ];
+      };
+
+      // TODO this should only run once per view, not per distribution
+      /*const extractDistributionInfoFromTypo3CmsPackagist = function extractDistributionInfoFromTypo3CmsPackagist($) {
+      return [
+          $('.version-details .version-number').text()
+        ];
+      };*/
+      
       
       $('#package-list .card').map(extractDataFromPanel);
 
@@ -143,15 +190,46 @@ const requestSatisPromise = function requestSatisPromise() {
           distribution.gitUrl.indexOf(`/${baseDistributionName}.git`)
         );
 
-        let requestComposerLockPromise = requestPromise(distributionFileRequestOptions(distributionProjectKey, 'composer.lock', 'master'))
+        const requestComposerLockPromise = requestPromise(distributionFileRequestOptions(distributionProjectKey, 'composer.lock', 'master'))
           .then(filterComposerLockToRmPackages);
-        let requestComposerJsonPromise = requestPromise(distributionFileRequestOptions(distributionProjectKey, 'composer.json', 'master'))
+        const requestComposerJsonPromise = requestPromise(distributionFileRequestOptions(distributionProjectKey, 'composer.json', 'master'))
           .then(extractDistributionInfoFromComposerJson);
+        const requestWriteInstallFilesPromise = requestPromise(distributionFileRequestOptions(distributionProjectKey, 'bamboo-specs/src/main/resources/build-distribution/03-write-install-files.sh', 'master'))
+          .then(extractDistributionInfoFromWriteInstallFiles).catch(function (err) { if (err.statusCode === 404) { return [false]; } });
+        const requestBackupTypo3Promise = requestPromise(distributionFileRequestOptions(distributionProjectKey, 'bamboo-specs/src/main/resources/distribution-deployment/util/backup-typo3.util.sh', 'master'))
+          .then(function () { return [true]; }).catch(function (err) { if (err.statusCode === 404) { return [false]; } });
+        const requestFrontendRcPromise = requestPromise(distributionFileRequestOptions(distributionProjectKey, '.rm-frontendrc.js', 'master'))
+          .then(function () { return [true]; }).catch(function (err) { if (err.statusCode === 404) { return [false]; } });
+        //const requestTypo3CmsPackagist = requestPromise(typo3CmsPackagistRequestOptions())
+        //  .then(extractDistributionInfoFromTypo3CmsPackagist);
 
-        return Promise.all([requestComposerLockPromise, requestComposerJsonPromise]).then(function ([composerLock, composerJson]) {
+        return Promise.all([
+          requestComposerLockPromise,
+          requestComposerJsonPromise,
+          requestWriteInstallFilesPromise,
+          requestBackupTypo3Promise,
+          requestFrontendRcPromise
+        ]).then(function ([
+          composerLock,
+          composerJson,
+          writeInstallFiles,
+          backupTypo3,
+          frontendRc
+        ]) {
           distribution['extensions'] = {
-            'master': { 'rm': composerLock[0], 'third': composerLock[2], 'project': composerLock[4] }
+            'master': { 
+              'rm': composerLock[0],
+              'third': composerLock[2],
+              'project': composerLock[4]
+            }
           };
+
+          distribution['typo3CoreVersion'] = composerLock[6];
+          distribution['rmDistVersion'] = composerJson[0];
+          distribution['rmBambooProjectKey'] = composerJson[1];
+          distribution['frontendIntegration'] = writeInstallFiles[0];
+          distribution['backupTypo3'] = backupTypo3[0];
+          distribution['newFrontend'] = frontendRc[0];
 
           distribution.extensions.master.rm.forEach(setRelationInSatis);
           distribution.extensions.master.rm.forEach(setCurrentVersion);
@@ -214,6 +292,7 @@ const requestSatisPromise = function requestSatisPromise() {
         const allProjectExtensions = removeDuplicates(distributions.reduce(reduceToProjectExtensions, []), 'name');
 
         return {
+          'currentTypo3CoreVersion': '10.4.9',
           'distributions': distributions,
           'allRmExtensions': allRmExtensions,
           'allThirdPartyExtensions': allThirdPartyExtensions,
@@ -282,6 +361,16 @@ var hbs = exphbs.create({
           `)
         : new hbs.handlebars.SafeString('<span class="x">X</span>');
     },
+    typo3Version: function (distributionCoreVersion, currentCoreVersion) {
+      return new hbs.handlebars.SafeString(`
+        <span class="diff diff--master diff--${semverDiff(distributionCoreVersion, currentCoreVersion)}">
+          ${distributionCoreVersion}
+          <span class="currentVersion">
+            (${currentCoreVersion})
+          </span>
+        </span>
+      `);
+    },
     isDivider: function (category, parentIndex, index, options) {
       if (category === 'rm' && ((parentIndex == 0) && (index === 0))) {
         return options.fn(this);
@@ -304,7 +393,7 @@ app.use(sassMiddleware({
   debug: true,
   outputStyle: 'compressed',
   includePaths: 'node_modules/compass-mixins/lib',
-  prefix:  '/css'  // Where prefix is at <link rel="stylesheets" href="prefix/style.css"/>
+  prefix:  '/css'
 }));
 app.use(express.static('public'));
 

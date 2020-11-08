@@ -24,15 +24,20 @@ $(document).ready(function () {
     // diff info (colors) and current version on respective column cells
     let toggleActiveColumn = function toggleActiveColumn(ev) {
         const $thHeader = $(ev.currentTarget);
-        console.log($thHeader);
 
+        // TODO still a bug here, some rotated th's highlight following cells starting in row 2
         const tdIndex = $thHeader.prevAll('th.rotated').length;
-        const numberOfDividers = $thHeader.prevAll('th.rotated.divider').length;;
+        const numberOfDividers = $thHeader.prevAll('th.rotated.divider').length;
+        
+        console.log('numberOfDividers', numberOfDividers);
+
         $thHeader.parents('table').children('tbody').children('tr').each(function (index, element) {
             let $tds = $(element).find('td');
 
             if (index === 0) {
                 $tds.eq(tdIndex).toggleClass('active')
+            } else if ($thHeader.hasClass('divider')) {
+                
             } else {
                 $tds.eq(tdIndex - numberOfDividers).toggleClass('active');
             }
