@@ -18,7 +18,9 @@
                 "SATIS_USERNAME": "satis",
                 "SATIS_PASSWORD": "password",
                 "SATIS_HOST": "satis.host.tld",
-                "BASE_DISTRIBUTION_NAME": "rm-dist"
+                "BASE_DISTRIBUTION_NAME": "rm-dist",
+                "HOMEPAGE_CACHE_TTL": "600",
+                "FETCH_CACHE_TTL": "600"
             }
         }
     ]

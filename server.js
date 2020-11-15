@@ -26,55 +26,31 @@ const satisHost = process.env.SATIS_HOST;
 
 const baseDistributionName = process.env.BASE_DISTRIBUTION_NAME;
 
-const satisFetch = async () => {
-  const url = `https://${satisHost}/`;
+const homepageCacheTtl = process.env.HOMEPAGE_CACHE_TTL || 600;
+const fetchCacheTtl = process.env.FETCH_CACHE_TTL || 600;
+
+const fetchUrl = async (url, authUser, authPass, method = 'GET') => {
   const cacheHit = fetchResultCache.get(url);
 
   if (cacheHit === undefined) {
-    const request = await fetch(url, {
-      method: 'GET',
-      headers: { 'Authorization': `Basic ${Buffer.from(satisUsername + ":" + satisPassword).toString('base64')}` },
-    });
+    const headers = {};    
+    if (authUser && authPass) headers['Authorization'] = `Basic ${Buffer.from(authUser + ":" + authPass).toString('base64')}`;
+
+    const request = await fetch(url, { method, headers, });
+    if (request.status === 404) throw new Error(`404; file ${url} was not found`);
 
     const requestBody = await request.text();
-    fetchResultCache.set(url, requestBody, 2000);
+    fetchResultCache.set(url, requestBody, fetchCacheTtl);
+
     return requestBody;
   } else {
     return cacheHit;
   }
 };
 
-const distributionFileFetch = async (projectKey, file, branch) => {
-  const url = `https://${bitbucketHost}/projects/${projectKey}/repos/${baseDistributionName}/raw/${file}?at=refs%2Fheads%2F${branch}`;
-  const cacheHit = fetchResultCache.get(url);
-
-  if (cacheHit === undefined) {
-    const request = await fetch(url, {
-      method: 'GET',
-      headers: { 'Authorization': `Basic ${Buffer.from(bitbucketUsername + ":" + bitbucketPassword).toString('base64')}` },
-    });
-
-    const requestBody = await request.text();
-    fetchResultCache.set(url, requestBody, 2000);
-    return requestBody;
-  } else {
-    return cacheHit;
-  }
+const distributionFileUrl = (projectKey, file, branch) => {
+  return `https://${bitbucketHost}/projects/${projectKey}/repos/${baseDistributionName}/raw/${file}?at=refs%2Fheads%2F${branch}`;
 };
-
-// TODO get version from packagist page
-/*const typo3CmsPackagistRequestOptions = function typo3CmsPackagistRequestOptions() {
-  return {
-    uri: 'https://packagist.org/packages/typo3/cms-core',
-    transform: function (body) {
-      return cheerio.load(body);
-    },
-    agentOptions: {
-      secureOptions: constants.SSL_OP_NO_SSLv3 | constants.SSL_OP_NO_TLSv1,
-      ecdhCurve: 'auto',
-    }
-  };
-};*/
 
 const extractDistributionData = (distributionElement, $satisHomepage) => {
   const $distribution = $satisHomepage(distributionElement);
@@ -96,9 +72,7 @@ const extractExtensionData = (extensionElement, $satisHomepage) => {
   const currentVersion = currentVersionLink.firstChild.nodeValue;
 
   let inDistributions = [];
-  $distributionNames.each((index, element) => {
-    inDistributions.push($satisHomepage(element).text());
-  });
+  $distributionNames.each((index, element) => inDistributions.push($satisHomepage(element).text()));
 
   return {
     "name": $extension.find('.card-header').attr('id').replace('"', '').trim(),
@@ -168,114 +142,95 @@ const extractDistributionInfoFromWriteInstallFiles = async (writeInstallFilesRes
   ];
 };
 
+const extractTypo3CMSVersionFromPackagist = async (typo3CmsPackagistResponse) => {
+  const $typo3CmsPackagist = cheerio.load(typo3CmsPackagistResponse);
+  const typo3CmsPackagistVersion = $typo3CmsPackagist('.version-details .version-number').text().replace('v','')
+
+  return [
+    typo3CmsPackagistVersion
+  ];
+};
+
 const extractDataForDistribution = (extensions) => {
   return async (distribution) => {
     const setRelationInSatis = (extension) => {
-      let satisExtension = extensions.find(ext => ext.name === extension.name);
+      const satisExtension = extensions.find(ext => ext.name === extension.name);
       extension['relationInSatis'] = satisExtension.inDistributions.includes(distribution.name);
       return extension;
     };
   
     const setCurrentVersion = (extension) => {
-      let matchingExtension = extensions.find(ext => ext.name === extension.name);
+      const matchingExtension = extensions.find(ext => ext.name === extension.name);
       extension['currentVersion'] = matchingExtension.currentVersion;
       return extension;
     };
   
     const setVersionDiff = (extension) => {
-      let matchingExtension = extensions.find(ext => ext.name === extension.name);
+      const matchingExtension = extensions.find(ext => ext.name === extension.name);
       extension['versionDiff'] = semverDiff(extension.version, matchingExtension.currentVersion);
       return extension;
     };
   
     // gitUrl format: ssh://git@${bitbucketHost}:${bitbucketPort}/PROJECTKEY/${baseDistributionName}.git
-    let distributionProjectKey = distribution.gitUrl.substring(
+    const distributionProjectKey = distribution.gitUrl.substring(
       distribution.gitUrl.indexOf(`${bitbucketPort}/`) + 5,
       distribution.gitUrl.indexOf(`/${baseDistributionName}.git`)
     );
   
-    const requestComposerLockPromise = distributionFileFetch(distributionProjectKey, 'composer.lock', 'master')
-      .then(filterComposerLockToRmPackages).catch(
-        function (err) { 
-          if (err.response.status === 404) { 
-            const test = distributionFileFetch(distributionProjectKey, 'composer.lock', 'master');
-            return [false]; 
-          } 
-        });
-    const requestComposerJsonPromise = distributionFileFetch(distributionProjectKey, 'composer.json', 'master')
-      .then(extractDistributionInfoFromComposerJson).catch(
-        function (err) {
-          if (err.response.status === 404) {
-            const test = distributionFileFetch(distributionProjectKey, 'composer.json', 'master');
-            return [false];
-          }
-        });
-    const requestWriteInstallFilesPromise = distributionFileFetch(distributionProjectKey, 'bamboo-specs/src/main/resources/build-distribution/03-write-install-files.sh', 'master')
-      .then(extractDistributionInfoFromWriteInstallFiles).catch(function (err) { if (err.response.status === 404) { return [false]; } });
-    const requestBackupTypo3Promise = distributionFileFetch(distributionProjectKey, 'bamboo-specs/src/main/resources/distribution-deployment/util/backup-typo3.util.sh', 'master')
-      .then(function () { return [true]; }).catch(function (err) { if (err.response.status === 404) { return [false]; } });
-    const requestFrontendRcPromise = distributionFileFetch(distributionProjectKey, '.rm-frontendrc.js', 'master')
-      .then(function () { return [true]; }).catch(function (err) { if (err.response.status === 404) { return [false]; } });
-    //const requestTypo3CmsPackagist = typo3CmsPackagistRequestOptions())
-    //  .then(extractDistributionInfoFromTypo3CmsPackagist);
+    const composerLock = await fetchUrl(distributionFileUrl(distributionProjectKey, 'composer.lock', 'master'), bitbucketUsername, bitbucketPassword)
+      .then(filterComposerLockToRmPackages).catch((err) => { if (err.message.indexOf('404') > -1) return [false]; });
+    const composerJson = await fetchUrl(distributionFileUrl(distributionProjectKey, 'composer.json', 'master'), bitbucketUsername, bitbucketPassword)
+      .then(extractDistributionInfoFromComposerJson).catch((err) => { if (err.message.indexOf('404') > -1) return [false]; });
+    const writeInstallFiles = await fetchUrl(distributionFileUrl(distributionProjectKey, 'bamboo-specs/src/main/resources/build-distribution/03-write-install-files.sh', 'master'), bitbucketUsername, bitbucketPassword)
+      .then(extractDistributionInfoFromWriteInstallFiles).catch((err) => { if (err.message.indexOf('404') > -1) return [false]; });
+    const backupTypo3 = await fetchUrl(distributionFileUrl(distributionProjectKey, 'bamboo-specs/src/main/resources/distribution-deployment/util/backup-typo3.util.sh', 'master'), bitbucketUsername, bitbucketPassword)
+      .then(() => [true]).catch((err) => { if (err.message.indexOf('404') > -1) return [false]; });
+    const frontendRc = await fetchUrl(distributionFileUrl(distributionProjectKey, '.rm-frontendrc.js', 'master'), bitbucketUsername, bitbucketPassword)
+      .then(() => [true]).catch((err) => { if (err.message.indexOf('404') > -1) return [false]; });
   
-    return await Promise.all([
-      requestComposerLockPromise,
-      requestComposerJsonPromise,
-      requestWriteInstallFilesPromise,
-      requestBackupTypo3Promise,
-      requestFrontendRcPromise
-    ]).then(function ([
-      composerLock,
-      composerJson,
-      writeInstallFiles,
-      backupTypo3,
-      frontendRc
-    ]) {
-      distribution['extensions'] = {
-        'master': { 
-          'rm': composerLock[0],
-          'third': composerLock[2],
-          'project': composerLock[4]
-        }
-      };
-  
-      distribution['typo3CoreVersion'] = composerLock[6];
-      distribution['rmDistVersion'] = composerJson[0];
-      distribution['rmBambooProjectKey'] = composerJson[1];
-      distribution['frontendIntegration'] = writeInstallFiles[0];
-      distribution['backupTypo3'] = backupTypo3[0];
-      distribution['newFrontend'] = frontendRc[0];
-  
-      distribution.extensions.master.rm.forEach(setRelationInSatis);
-      distribution.extensions.master.rm.forEach(setCurrentVersion);
-      distribution.extensions.master.rm.forEach(setVersionDiff);
-      distribution.extensions.master.project.forEach(setRelationInSatis);
-  
-      // These (devExtensions) are not used for anything yet, might want to copy some more
-      // forEach cases from above when starting to use these
-      distribution['devExtensions'] = {
-        'master': { 'rm': composerLock[1], 'third': composerLock[3], 'project': composerLock[5] }
-      };
-  
-      distribution.devExtensions.master.rm.forEach(setRelationInSatis);
-      distribution.devExtensions.master.rm.forEach(setCurrentVersion);
-      distribution.devExtensions.master.rm.forEach(setVersionDiff);
-      distribution.devExtensions.master.project.forEach(setRelationInSatis);
-  
-      return distribution;
-    });
+    distribution['extensions'] = {
+      'master': { 
+        'rm': composerLock[0],
+        'third': composerLock[2],
+        'project': composerLock[4]
+      }
+    };
+
+    distribution['typo3CoreVersion'] = composerLock[6];
+    distribution['rmDistVersion'] = composerJson[0];
+    distribution['rmBambooProjectKey'] = composerJson[1];
+    distribution['frontendIntegration'] = writeInstallFiles[0];
+    distribution['backupTypo3'] = backupTypo3[0];
+    distribution['newFrontend'] = frontendRc[0];
+
+    distribution.extensions.master.rm.forEach(setRelationInSatis);
+    distribution.extensions.master.rm.forEach(setCurrentVersion);
+    distribution.extensions.master.rm.forEach(setVersionDiff);
+    distribution.extensions.master.project.forEach(setRelationInSatis);
+
+    // These (devExtensions) are not used for anything yet, might want to copy some more
+    // forEach cases from above when starting to use these
+    distribution['devExtensions'] = {
+      'master': { 'rm': composerLock[1], 'third': composerLock[3], 'project': composerLock[5] }
+    };
+
+    distribution.devExtensions.master.rm.forEach(setRelationInSatis);
+    distribution.devExtensions.master.rm.forEach(setCurrentVersion);
+    distribution.devExtensions.master.rm.forEach(setVersionDiff);
+    distribution.devExtensions.master.project.forEach(setRelationInSatis);
+
+    return distribution;
   };
 };
 
-const requestSatis = async () => {
+const getMatrixData = async () => {
   const distributions = [];
   const extensions = [];
 
-  const $satisHomepage = cheerio.load(await satisFetch());
+  const $satisHomepage = cheerio.load(await fetchUrl(`https://${satisHost}/`, satisUsername, satisPassword));
   $satisHomepage('#package-list .card').map(extractDataFromPanelFn($satisHomepage, distributions, extensions));
 
-  return Promise.all(distributions.map(extractDataForDistribution(extensions))).then(function (distributions) {
+  return Promise.all(distributions.map(extractDataForDistribution(extensions))).then(async (distributions) => {
     const removeDuplicates = (array, property) => {
       let obj = {};
       return Object.keys(array.reduce((prev, next) => {
@@ -309,12 +264,15 @@ const requestSatis = async () => {
     const allThirdPartyExtensions = removeDuplicates(distributions.reduce(reduceToThirdPartyExtensions, []), 'name');
     const allProjectExtensions = removeDuplicates(distributions.reduce(reduceToProjectExtensions, []), 'name');
 
+    const currentTypo3CoreVersion = (await fetchUrl('https://packagist.org/packages/typo3/cms-core')
+      .then(extractTypo3CMSVersionFromPackagist))[0];
+
     return {
-      'currentTypo3CoreVersion': '10.4.9',
-      'distributions': distributions,
-      'allRmExtensions': allRmExtensions,
-      'allThirdPartyExtensions': allThirdPartyExtensions,
-      'allProjectExtensions': allProjectExtensions
+      currentTypo3CoreVersion,
+      distributions,
+      allRmExtensions,
+      allThirdPartyExtensions,
+      allProjectExtensions
     }
   });
 }
@@ -412,8 +370,18 @@ app.use(sassMiddleware({
 app.use(express.static('public'));
 
 app.get('/', asyncHandler(async (req, res) => {
-  const data = await requestSatis();
-  res.render('feature-matrix', data);
+  let matrixData;
+  
+  const cacheHit = fetchResultCache.get('matrixHomepage');
+
+  if (cacheHit === undefined) {
+    matrixData = await getMatrixData();
+    fetchResultCache.set('matrixHomepage', matrixData, homepageCacheTtl);
+  } else {
+    matrixData = cacheHit;
+  }
+
+  res.render('feature-matrix', matrixData);
 }));
 
 app.listen(3000, "0.0.0.0");
@@ -421,7 +389,9 @@ app.listen(3000, "0.0.0.0");
 /*
 
 # TODO
-* sort extensions by frequency
+* sort extensions by frequency (per category)
 * add sensible links where applicable (typo3 systems, projects etc)
+* move all assets to local hosting from CDNs
+* add cache clear route for url / project / repository, integrate with docker-satis
 
 */
