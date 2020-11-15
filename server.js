@@ -7,7 +7,7 @@ const cheerio = require('cheerio');
 const path = require('path');
 
 const Koa = require('koa');
-const Router = require('koa-router');
+const Router = require('@koa/router');
 
 const hbs = require('koa-hbs');
 const serve = require('koa-static');
@@ -30,8 +30,8 @@ const satisHost = process.env.SATIS_HOST;
 
 const baseDistributionName = process.env.BASE_DISTRIBUTION_NAME;
 
-const homepageCacheTtl = process.env.HOMEPAGE_CACHE_TTL || 600;
-const fetchCacheTtl = process.env.FETCH_CACHE_TTL || 600;
+const homepageCacheTtl = parseInt(process.env.HOMEPAGE_CACHE_TTL) || 600;
+const fetchCacheTtl = parseInt(process.env.FETCH_CACHE_TTL) || 600;
 
 const httpsAgent = new https.Agent({
   secureOptions: constants.SSL_OP_NO_SSLv3 | constants.SSL_OP_NO_TLSv1,
@@ -317,7 +317,7 @@ const versionDiffLink = function versionDiffLink(extension) {
 };
 
 const app = new Koa();
-var router = new Router();
+const router = new Router();
 
 const extension = (extensionFullName) => {
   return extensionFullName.substring(
@@ -383,6 +383,26 @@ router.get('/', async (ctx) => {
   }
 
   await ctx.render('feature-matrix', matrixData);
+});
+
+router.get('/cache/clear', async (ctx) => {
+  fetchResultCache.flushAll();
+  ctx.status = 200;
+});
+
+router.get('/cache/clear/:repository', async (ctx) => {
+  const distributionProjectKey = ctx.params.repository;
+  const keys = [
+    'matrixHomepage',
+    distributionFileUrl(distributionProjectKey, 'composer.lock', 'master'),
+    distributionFileUrl(distributionProjectKey, 'composer.json', 'master'),
+    distributionFileUrl(distributionProjectKey, 'bamboo-specs/src/main/resources/build-distribution/03-write-install-files.sh', 'master'),
+    distributionFileUrl(distributionProjectKey, 'bamboo-specs/src/main/resources/distribution-deployment/util/backup-typo3.util.sh', 'master'),
+    distributionFileUrl(distributionProjectKey, '.rm-frontendrc.js', 'master'),
+  ];
+
+  fetchResultCache.del(keys);
+  ctx.status = 200;
 });
 
 app

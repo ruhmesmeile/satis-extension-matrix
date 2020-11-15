@@ -8,11 +8,11 @@
     "start": "node server.js"
   },
   "dependencies": {
+    "@koa/router": "^10.0.0",
     "cheerio": "^1.0.0-rc.2",
     "compass-mixins": "^0.12.10",
     "koa": "^2.13.0",
     "koa-hbs": "^1.0.0",
-    "koa-router": "^10.0.0",
     "koa-static": "^5.0.0",
     "list.js": "^1.5.0",
     "node-cache": "^5.1.2",
