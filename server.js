@@ -1,5 +1,7 @@
 const asyncHandler = require('express-async-handler');
 const fetch = require('node-fetch');
+const https = require('https');
+const constants = require('constants');
 
 //const constants = require('constants');
 const cheerio = require('cheerio');
@@ -29,6 +31,11 @@ const baseDistributionName = process.env.BASE_DISTRIBUTION_NAME;
 const homepageCacheTtl = process.env.HOMEPAGE_CACHE_TTL || 600;
 const fetchCacheTtl = process.env.FETCH_CACHE_TTL || 600;
 
+const httpsAgent = new https.Agent({
+  secureOptions: constants.SSL_OP_NO_SSLv3 | constants.SSL_OP_NO_TLSv1,
+  ecdhCurve: 'auto',
+});
+
 const fetchUrl = async (url, authUser, authPass, method = 'GET') => {
   const cacheHit = fetchResultCache.get(url);
 
@@ -36,7 +43,7 @@ const fetchUrl = async (url, authUser, authPass, method = 'GET') => {
     const headers = {};    
     if (authUser && authPass) headers['Authorization'] = `Basic ${Buffer.from(authUser + ":" + authPass).toString('base64')}`;
 
-    const request = await fetch(url, { method, headers, });
+    const request = await fetch(url, { method, headers, agent: httpsAgent });
     if (request.status === 404) throw new Error(`404; file ${url} was not found`);
 
     const requestBody = await request.text();
@@ -393,5 +400,6 @@ app.listen(3000, "0.0.0.0");
 * add sensible links where applicable (typo3 systems, projects etc)
 * move all assets to local hosting from CDNs
 * add cache clear route for url / project / repository, integrate with docker-satis
+* add better data table
 
 */
