@@ -11,11 +11,12 @@
     "cheerio": "^1.0.0-rc.2",
     "compass-mixins": "^0.12.10",
     "express": "^4.16.3",
+    "express-async-handler": "^1.1.4",
     "express-handlebars": "^3.0.0",
     "list.js": "^1.5.0",
+    "node-cache": "^5.1.2",
+    "node-fetch": "^2.6.1",
     "node-sass-middleware": "^0.11.0",
-    "request": "^2.87.0",
-    "request-promise": "^4.2.2",
     "semver-diff": "^2.1.0",
     "semver-regex": "^2.0.0"
   }

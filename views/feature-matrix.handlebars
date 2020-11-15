@@ -10,16 +10,8 @@
     <div class="row">
         <div class="col table-col">
             <table id="table-header" class="table table-striped table-hover table-bordered table-sm">
-                <thead class="thead-dark">
-                    <tr><th scope="col"><div><span></span></div></th></tr>
-                </thead>
-                <tbody>
-                    {{#each distributions}}
-                    <tr>
-                        <th scope="row">{{name}}</th>
-                    </tr>
-                    {{/each}}
-                </tbody>
+                <thead class="thead-dark"><tr><th scope="col"><div><span></span></div></th></tr></thead>
+                <tbody>{{#each distributions}}<tr><th scope="row">{{name}}</th></tr>{{/each}}</tbody>
             </table>
 
             <table id="table-items" class="table table-striped table-hover table-bordered table-sm">
@@ -49,31 +41,21 @@
                     {{#each distributions}}
                     <tr>
                         <th scope="row">{{name}}</th>
-                        {{#if @first}}
-                            <td scope="col" rowspan="{{@root.distributions.length}}" class="divider">&nbsp;</td>
-                        {{/if}}
+                        {{#if @first}}<td scope="col" rowspan="{{@root.distributions.length}}" class="divider">&nbsp;</td>{{/if}}
                         <td scope="col">{{rmDistVersion}}</td>
                         <td scope="col">{{ typo3Version typo3CoreVersion @root.currentTypo3CoreVersion }}</td>
                         <td scope="col">{{rmBambooProjectKey}}</td>
-                        {{#if @first}}
-                            <td scope="col" rowspan="{{@root.distributions.length}}" class="divider">&nbsp;</td>
-                        {{/if}}
+                        {{#if @first}}<td scope="col" rowspan="{{@root.distributions.length}}" class="divider">&nbsp;</td>{{/if}}
                         <td scope="col">{{#if frontendIntegration}}<i class="far fa-check-circle"></i>{{else}}<i class="far fa-times-circle"></i>{{/if}}</td>
                         <td scope="col">{{#if backupTypo3}}<i class="far fa-check-circle"></i>{{else}}<i class="far fa-times-circle"></i>{{/if}}</td>
-                        {{#if @first}}
-                            <td scope="col" rowspan="{{@root.distributions.length}}" class="divider">&nbsp;</td>
-                        {{/if}}
+                        {{#if @first}}<td scope="col" rowspan="{{@root.distributions.length}}" class="divider">&nbsp;</td>{{/if}}
                         <td scope="col">{{#if newFrontend}}<i class="far fa-check-circle"></i>{{else}}<i class="far fa-times-circle"></i>{{/if}}</td>
                         {{#each @root.allRmExtensions}}
-                        {{#isDivider "rm" @../index @index}}
-                            <td scope="col" rowspan="{{@root.distributions.length}}" class="divider">&nbsp;</td>
-                        {{/isDivider}}
+                        {{#isDivider "rm" @../index @index}}<td scope="col" rowspan="{{@root.distributions.length}}" class="divider">&nbsp;</td>{{/isDivider}}
                         <td scope="col">{{ version ../this name }}</td>
                         {{/each}}
                         {{#each @root.allProjectExtensions}}
-                        {{#isDivider "all" @../index @index}}
-                            <td scope="col" rowspan="{{@root.distributions.length}}" class="divider">&nbsp;</td>
-                        {{/isDivider}}
+                        {{#isDivider "all" @../index @index}}<td scope="col" rowspan="{{@root.distributions.length}}" class="divider">&nbsp;</td>{{/isDivider}}
                         <td scope="col">{{ version ../this name }}</td>
                         {{/each}}
                     </tr>

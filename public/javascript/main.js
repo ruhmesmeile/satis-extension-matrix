@@ -29,15 +29,12 @@ $(document).ready(function () {
         const tdIndex = $thHeader.prevAll('th.rotated').length;
         const numberOfDividers = $thHeader.prevAll('th.rotated.divider').length;
         
-        console.log('numberOfDividers', numberOfDividers);
-
         $thHeader.parents('table').children('tbody').children('tr').each(function (index, element) {
             let $tds = $(element).find('td');
 
             if (index === 0) {
                 $tds.eq(tdIndex).toggleClass('active')
             } else if ($thHeader.hasClass('divider')) {
-                
             } else {
                 $tds.eq(tdIndex - numberOfDividers).toggleClass('active');
             }
