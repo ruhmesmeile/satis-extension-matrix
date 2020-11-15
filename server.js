@@ -1,15 +1,17 @@
-const asyncHandler = require('express-async-handler');
-const fetch = require('node-fetch');
-const https = require('https');
-const constants = require('constants');
 
-//const constants = require('constants');
+const https = require('https');
+const fetch = require('node-fetch');
+
+const constants = require('constants');
 const cheerio = require('cheerio');
 const path = require('path');
 
-const express = require('express');
-const exphbs = require('express-handlebars');
-const sassMiddleware = require('node-sass-middleware')
+const Koa = require('koa');
+const Router = require('koa-router');
+
+const hbs = require('koa-hbs');
+const serve = require('koa-static');
+const sass = require('node-sass-koa-middleware');
 
 const semverRegex = require('semver-regex');
 const semverDiff = require('semver-diff');
@@ -314,69 +316,61 @@ const versionDiffLink = function versionDiffLink(extension) {
   return `https://${bitbucketHost}/projects/${projectKey}/repos/${repoName}/compare/commits?targetBranch=refs%2Ftags%2F${extension.version}&sourceBranch=refs%2Ftags%2F${extension.currentVersion}`;
 };
 
-var app = express();
-var hbs = exphbs.create({
-  helpers: {
-    extension: function (extensionFullName) {
-      return extensionFullName.substring(
-        extensionFullName.indexOf('/') + 1,
-        extensionFullName.length
-      );
-    },
-    version: function (distribution, extensionName) {
-      let masterExtension = distribution.extensions.master.rm.find(ext => ext.name === extensionName);
-      if (!masterExtension) {
-        masterExtension = distribution.extensions.master.project.find(ext => ext.name.indexOf(extensionName) > -1);
-      }
+const app = new Koa();
+var router = new Router();
 
-      return masterExtension
-        ? new hbs.handlebars.SafeString(`
-            <span class="diff diff--master diff--${masterExtension.versionDiff}">
-              <a target="_blank" href="${versionLink(masterExtension)}">${masterExtension.version}</a> 
-              <span class="currentVersion">
-                (<a target="_blank" href="${versionDiffLink(masterExtension)}">${masterExtension.currentVersion}</a>)
-              </span>
-            </span>
-          `)
-        : new hbs.handlebars.SafeString('<span class="x">X</span>');
-    },
-    typo3Version: function (distributionCoreVersion, currentCoreVersion) {
-      return new hbs.handlebars.SafeString(`
-        <span class="diff diff--master diff--${semverDiff(distributionCoreVersion, currentCoreVersion)}">
-          ${distributionCoreVersion}
+const extension = (extensionFullName) => {
+  return extensionFullName.substring(
+    extensionFullName.indexOf('/') + 1,
+    extensionFullName.length
+  );
+};
+
+const version = (distribution, extensionName) => {
+  let masterExtension = distribution.extensions.master.rm.find(ext => ext.name === extensionName);
+  if (!masterExtension) {
+    masterExtension = distribution.extensions.master.project.find(ext => ext.name.indexOf(extensionName) > -1);
+  }
+
+  return masterExtension
+    ? new hbs.SafeString(`
+        <span class="diff diff--master diff--${masterExtension.versionDiff}">
+          <a target="_blank" href="${versionLink(masterExtension)}">${masterExtension.version}</a> 
           <span class="currentVersion">
-            (${currentCoreVersion})
+            (<a target="_blank" href="${versionDiffLink(masterExtension)}">${masterExtension.currentVersion}</a>)
           </span>
         </span>
-      `);
-    },
-    isDivider: function (category, parentIndex, index, options) {
-      if (category === 'rm' && ((parentIndex == 0) && (index === 0))) {
-        return options.fn(this);
-      } else if (category === 'all' && ((parentIndex == 0) && (index === 0))) {
-        return options.fn(this);
-      } else {
-        return options.inverse(this);
-      }
-    }
-  },
-  defaultLayout: 'main'
-});
+      `)
+    : new hbs.SafeString('<span class="x">X</span>');
+};
 
-app.engine('handlebars', hbs.engine);
-app.set('view engine', 'handlebars');
+const typo3Version = (distributionCoreVersion, currentCoreVersion) => {
+  return new hbs.SafeString(`
+    <span class="diff diff--master diff--${semverDiff(distributionCoreVersion, currentCoreVersion)}">
+      ${distributionCoreVersion}
+      <span class="currentVersion">
+        (${currentCoreVersion})
+      </span>
+    </span>
+  `);
+};
 
-app.use(sassMiddleware({
-  src: path.join(__dirname, 'src', 'scss'),
-  dest: path.join(__dirname, 'public', 'css'),
-  debug: true,
-  outputStyle: 'compressed',
-  includePaths: 'node_modules/compass-mixins/lib',
-  prefix:  '/css'
-}));
-app.use(express.static('public'));
+const isDivider = (category, parentIndex, index, options) => {
+  if (category === 'rm' && ((parentIndex == 0) && (index === 0))) {
+    return options.fn(this);
+  } else if (category === 'all' && ((parentIndex == 0) && (index === 0))) {
+    return options.fn(this);
+  } else {
+    return options.inverse(this);
+  }
+};
 
-app.get('/', asyncHandler(async (req, res) => {
+hbs.registerHelper('extension', extension);
+hbs.registerHelper('version', version);
+hbs.registerHelper('typo3Version', typo3Version);
+hbs.registerHelper('isDivider', isDivider);
+
+router.get('/', async (ctx) => {
   let matrixData;
   
   const cacheHit = fetchResultCache.get('matrixHomepage');
@@ -388,10 +382,29 @@ app.get('/', asyncHandler(async (req, res) => {
     matrixData = cacheHit;
   }
 
-  res.render('feature-matrix', matrixData);
-}));
+  await ctx.render('feature-matrix', matrixData);
+});
 
-app.listen(3000, "0.0.0.0");
+app
+  .use(hbs.middleware({
+    viewPath: path.join(__dirname, 'views'),
+    layoutsPath: path.join(__dirname, 'views', 'layouts'),
+    defaultLayout: 'main',
+    extname: '.handlebars'
+  }))
+  .use(router.routes())
+  .use(router.allowedMethods())
+  .use(sass({
+    src: path.join(__dirname, 'src', 'scss'),
+    dest: path.join(__dirname, 'public', 'css'),
+    debug: true,
+    outputStyle: 'compressed',
+    includePaths: 'node_modules/compass-mixins/lib',
+    prefix:  '/css'    
+  }))
+  .use(serve(path.join(__dirname, 'public')));
+
+app.listen(3000);
 
 /*
 
