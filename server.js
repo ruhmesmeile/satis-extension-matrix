@@ -394,6 +394,7 @@ router.get('/cache/clear/:repository', async (ctx) => {
   const distributionProjectKey = ctx.params.repository;
   const keys = [
     'matrixHomepage',
+    `https://${satisHost}/`,
     distributionFileUrl(distributionProjectKey, 'composer.lock', 'master'),
     distributionFileUrl(distributionProjectKey, 'composer.json', 'master'),
     distributionFileUrl(distributionProjectKey, 'bamboo-specs/src/main/resources/build-distribution/03-write-install-files.sh', 'master'),
