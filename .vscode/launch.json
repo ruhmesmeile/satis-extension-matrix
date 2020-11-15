@@ -10,6 +10,7 @@
             "request": "launch",
             "name": "Launch Program",
             "program": "${workspaceFolder}/server.js",
+            "runtimeVersion": "12.18.3",
             "env": {
                 "BITBUCKET_USERNAME": "bitbucket",
                 "BITBUCKET_PASSWORD": "password",
