@@ -61,6 +61,10 @@ const distributionFileUrl = (projectKey, file, branch) => {
   return `https://${bitbucketHost}/projects/${projectKey}/repos/${baseDistributionName}/raw/${file}?at=refs%2Fheads%2F${branch}`;
 };
 
+const distributionFolderPath = (projectKey, path, branch) => {
+  return `https://${bitbucketHost}/projects/${projectKey}/repos/${baseDistributionName}/browse/${path}?at=refs%2Fheads%2F${branch}`;
+};
+
 const extractDistributionData = (distributionElement, $satisHomepage) => {
   const $distribution = $satisHomepage(distributionElement);
   const $gitUrl = $distribution.find('dt:contains(Releases)').next('dd').find('a:contains(dev-master)');
@@ -147,7 +151,7 @@ const extractDistributionInfoFromWriteInstallFiles = async (writeInstallFilesRes
   const newFrontendIntegration = writeInstallFilesResponse.indexOf('verdaccio') > 0;
 
   return [
-    newFrontendIntegration
+    newFrontendIntegration,
   ];
 };
 
@@ -156,7 +160,16 @@ const extractTypo3CMSVersionFromPackagist = async (typo3CmsPackagistResponse) =>
   const typo3CmsPackagistVersion = $typo3CmsPackagist('.version-details .version-number').text().replace('v','')
 
   return [
-    typo3CmsPackagistVersion
+    typo3CmsPackagistVersion,
+  ];
+};
+
+const extractNumberOfPatches = async (listingHtml) => {
+  const $page = cheerio.load(listingHtml);
+  const hasPatches = $page('#browse-table tbody tr').length > 1;
+
+  return [
+    hasPatches,
   ];
 };
 
@@ -196,6 +209,10 @@ const extractDataForDistribution = (extensions) => {
       .then(() => [true]).catch((err) => { if (err.message.indexOf('404') > -1) return [false]; });
     const frontendRc = await fetchUrl(distributionFileUrl(distributionProjectKey, '.rm-frontendrc.js', 'master'), bitbucketUsername, bitbucketPassword)
       .then(() => [true]).catch((err) => { if (err.message.indexOf('404') > -1) return [false]; });
+    const composerPatches = await fetchUrl(distributionFolderPath(distributionProjectKey, 'src/Patches', 'master'), bitbucketUsername, bitbucketPassword)
+      .then(extractNumberOfPatches).catch((err) => { if (err.message.indexOf('404') > -1) return [false]; });
+    const frontendPatches = await fetchUrl(distributionFolderPath(distributionProjectKey, 'patches', 'master'), bitbucketUsername, bitbucketPassword)
+      .then(extractNumberOfPatches).catch((err) => { if (err.message.indexOf('404') > -1) return [false]; });
   
     distribution['extensions'] = {
       'master': { 
@@ -211,6 +228,8 @@ const extractDataForDistribution = (extensions) => {
     distribution['frontendIntegration'] = writeInstallFiles[0];
     distribution['backupTypo3'] = backupTypo3[0];
     distribution['newFrontend'] = frontendRc[0];
+    distribution['hasComposerPatches'] = composerPatches[0];
+    distribution['hasFrontendPatches'] = frontendPatches[0];
 
     distribution.extensions.master.rm.forEach(setRelationInSatis);
     distribution.extensions.master.rm.forEach(setCurrentVersion);
