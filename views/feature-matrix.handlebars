@@ -26,9 +26,9 @@
                         <th class="rotated" scope="col"><div><span>Automatic Frontend Integration&nbsp;&nbsp;</span></div></th>
                         <th class="rotated" scope="col"><div><span>Automatic Backup Scripts&nbsp;&nbsp;</span></div></th>
                         <th class="rotated" scope="col"><div><span>Composer Patches?&nbsp;&nbsp;</span></div></th>
-                        <th class="rotated" scope="col"><div><span>Frontend Patches?&nbsp;&nbsp;</span></div></th>
                         <th class="rotated divider" scope="col"><div><span>Frontend</span></div></th>
                         <th class="rotated" scope="col"><div><span>New Frontend&nbsp;&nbsp;</span></div></th>
+                        <th class="rotated" scope="col"><div><span>Frontend Patches?&nbsp;&nbsp;</span></div></th>
                         <th class="rotated divider" scope="col"><div><span>TYPO3-Extensions</span></div></th>
                         {{#each allRmExtensions}}
                         <th class="rotated" scope="col"><div><span>{{extension name}}&nbsp;&nbsp;<span class="version">({{ currentVersion }})</span></span></div></th>
@@ -51,9 +51,9 @@
                         <td scope="col">{{#if frontendIntegration}}<i class="far fa-check-circle"></i>{{else}}<i class="far fa-times-circle"></i>{{/if}}</td>
                         <td scope="col">{{#if backupTypo3}}<i class="far fa-check-circle"></i>{{else}}<i class="far fa-times-circle"></i>{{/if}}</td>
                         <td scope="col">{{#if hasComposerPatches}}<i class="far fa-check-circle"></i>{{else}}<i class="far fa-times-circle"></i>{{/if}}</td>
-                        <td scope="col">{{#if hasFrontendPatches}}<i class="far fa-check-circle"></i>{{else}}<i class="far fa-times-circle"></i>{{/if}}</td>
                         {{#if @first}}<td scope="col" rowspan="{{@root.distributions.length}}" class="divider">&nbsp;</td>{{/if}}
                         <td scope="col">{{#if newFrontend}}<i class="far fa-check-circle"></i>{{else}}<i class="far fa-times-circle"></i>{{/if}}</td>
+                        <td scope="col">{{#if hasFrontendPatches}}<i class="far fa-check-circle"></i>{{else}}<i class="far fa-times-circle"></i>{{/if}}</td>
                         {{#each @root.allRmExtensions}}
                         {{#isDivider "rm" @../index @index}}<td scope="col" rowspan="{{@root.distributions.length}}" class="divider">&nbsp;</td>{{/isDivider}}
                         <td scope="col">{{ version ../this name }}</td>
