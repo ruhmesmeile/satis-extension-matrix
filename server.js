@@ -42,7 +42,7 @@ const fetchUrl = async (url, authUser, authPass, method = 'GET') => {
   const cacheHit = fetchResultCache.get(url);
 
   if (cacheHit === undefined) {
-    const headers = {};    
+    const headers = {};
     if (authUser && authPass) headers['Authorization'] = `Basic ${Buffer.from(authUser + ":" + authPass).toString('base64')}`;
 
     const request = await fetch(url, { method, headers, agent: httpsAgent });
@@ -180,32 +180,32 @@ const extractDataForDistribution = (extensions) => {
       extension['relationInSatis'] = satisExtension.inDistributions.includes(distribution.name);
       return extension;
     };
-  
+
     const setCurrentVersion = (extension) => {
       const matchingExtension = extensions.find(ext => ext.name === extension.name);
       extension['currentVersion'] = matchingExtension.currentVersion;
       return extension;
     };
-  
+
     const setVersionDiff = (extension) => {
       const matchingExtension = extensions.find(ext => ext.name === extension.name);
       extension['versionDiff'] = semverDiff(extension.version, matchingExtension.currentVersion);
       return extension;
     };
-  
+
     // gitUrl format: ssh://git@${bitbucketHost}:${bitbucketPort}/PROJECTKEY/${baseDistributionName}.git
     const distributionProjectKey = distribution.gitUrl.substring(
       distribution.gitUrl.indexOf(`${bitbucketPort}/`) + 5,
       distribution.gitUrl.indexOf(`/${baseDistributionName}.git`)
     );
-  
+
     const composerLock = await fetchUrl(distributionFileUrl(distributionProjectKey, 'composer.lock', 'master'), bitbucketUsername, bitbucketPassword)
       .then(filterComposerLockToRmPackages).catch((err) => { if (err.message.indexOf('404') > -1) return [false]; });
     const composerJson = await fetchUrl(distributionFileUrl(distributionProjectKey, 'composer.json', 'master'), bitbucketUsername, bitbucketPassword)
       .then(extractDistributionInfoFromComposerJson).catch((err) => { if (err.message.indexOf('404') > -1) return [false]; });
-    const writeInstallFiles = await fetchUrl(distributionFileUrl(distributionProjectKey, 'bamboo-specs/src/main/resources/build-distribution/03-write-install-files.sh', 'master'), bitbucketUsername, bitbucketPassword)
+    const writeInstallFiles = await fetchUrl(distributionFileUrl(distributionProjectKey, 'bamboo-specs/src/main/resources/build/03-write-install-files.sh', 'master'), bitbucketUsername, bitbucketPassword)
       .then(extractDistributionInfoFromWriteInstallFiles).catch((err) => { if (err.message.indexOf('404') > -1) return [false]; });
-    const backupTypo3 = await fetchUrl(distributionFileUrl(distributionProjectKey, 'bamboo-specs/src/main/resources/distribution-deployment/util/backup-typo3.util.sh', 'master'), bitbucketUsername, bitbucketPassword)
+    const backupTypo3 = await fetchUrl(distributionFileUrl(distributionProjectKey, 'bamboo-specs/src/main/resources/deploy/backup-typo3.util.sh', 'master'), bitbucketUsername, bitbucketPassword)
       .then(() => [true]).catch((err) => { if (err.message.indexOf('404') > -1) return [false]; });
     const frontendRc = await fetchUrl(distributionFileUrl(distributionProjectKey, '.rm-frontendrc.js', 'master'), bitbucketUsername, bitbucketPassword)
       .then(() => [true]).catch((err) => { if (err.message.indexOf('404') > -1) return [false]; });
@@ -213,9 +213,9 @@ const extractDataForDistribution = (extensions) => {
       .then(extractNumberOfPatches).catch((err) => { if (err.message.indexOf('404') > -1) return [false]; });
     const frontendPatches = await fetchUrl(distributionFolderPath(distributionProjectKey, 'patches', 'master'), bitbucketUsername, bitbucketPassword)
       .then(extractNumberOfPatches).catch((err) => { if (err.message.indexOf('404') > -1) return [false]; });
-  
+
     distribution['extensions'] = {
-      'master': { 
+      'master': {
         'rm': composerLock[0],
         'third': composerLock[2],
         'project': composerLock[4]
@@ -354,7 +354,7 @@ const version = (distribution, extensionName) => {
   return masterExtension
     ? new hbs.SafeString(`
         <span class="diff diff--master diff--${masterExtension.versionDiff}">
-          <a target="_blank" href="${versionLink(masterExtension)}">${masterExtension.version}</a> 
+          <a target="_blank" href="${versionLink(masterExtension)}">${masterExtension.version}</a>
           <span class="currentVersion">
             (<a target="_blank" href="${versionDiffLink(masterExtension)}">${masterExtension.currentVersion}</a>)
           </span>
@@ -391,7 +391,7 @@ hbs.registerHelper('isDivider', isDivider);
 
 router.get('/', async (ctx) => {
   let matrixData;
-  
+
   const cacheHit = fetchResultCache.get('matrixHomepage');
 
   if (cacheHit === undefined) {
@@ -440,7 +440,7 @@ app
     debug: true,
     outputStyle: 'compressed',
     includePaths: 'node_modules/compass-mixins/lib',
-    prefix:  '/css'    
+    prefix:  '/css'
   }))
   .use(serve(path.join(__dirname, 'public')));
 
