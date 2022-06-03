@@ -19,6 +19,6 @@
     "node-fetch": "^2.6.1",
     "node-sass-koa-middleware": "^1.0.2",
     "semver-diff": "^2.1.0",
-    "semver-regex": "^2.0.0"
+    "semver-regex": "^3.1.4"
   }
 }
